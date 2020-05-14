@@ -1,0 +1,3 @@
+[submodule "SingleCellCBC"]
+	path = SingleCellCBC
+	url = https://github.com/MarkBlyth/SingleCellCBC.git
