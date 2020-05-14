@@ -1,4 +1,6 @@
-from model_class import Model
+import sys
+sys.path.append("..")
+from SingleCellCBC.model.modelclass import Model
 import numpy as np
 
 
