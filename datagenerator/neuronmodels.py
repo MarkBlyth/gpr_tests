@@ -1,6 +1,13 @@
 import scipy.integrate
 import numpy as np
 
+DATASETS = {
+    "HodgkinHuxley": hodgkin_huxley,
+    "FitzhughNagumo": fitzhugh_nagumo,
+    "HindmarshRose": hindmarsh_rose,
+    "HRFast": hindmarsh_rose_fast,
+}
+
 
 def hodgkin_huxley(x, gk=80, Ek=-100, gna=100, Ena=50, gl=0.1, El=-67, I=1.75, C=1):
     """Right-hand side for the Hodgkin-Huxley equation.
@@ -176,10 +183,10 @@ def simple_data_generator(model, observation_noise=0, **kwargs):
     solver_args = {**{"t_span": tspan, "y0": y0s[model]}, **kwargs}
 
     # Set up and solve!
-    model_func = lambda t,x: model(x, **model_kwargs)
+    model_func = lambda t, x: model(x, **model_kwargs)
     solution = scipy.integrate.solve_ivp(model_func, **solver_args)
 
     vs = solution.y[0]
     noise = np.random.normal(0, observation_noise, vs.shape)
 
-    return solution.t, vs+noise
+    return solution.t, vs + noise
