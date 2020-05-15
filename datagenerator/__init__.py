@@ -1,4 +1,4 @@
-from . import neuronmodels
+from .neuronmodels import *
 __all__ = ["neuronmodels"]
 
 DATASETS = {
