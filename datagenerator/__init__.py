@@ -1,6 +1,5 @@
 from . import neuronmodels
-from . import datasets
-__all__ = ["neuronmodels", "datasets"]
+__all__ = ["neuronmodels"]
 
 DATASETS = {
     "HodgkinHuxley": neuronmodels.hodgkin_huxley,
