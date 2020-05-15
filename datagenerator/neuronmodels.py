@@ -1,6 +1,4 @@
-import sys
-sys.path.append("..")
-from SingleCellCBC.model.modelclass import Model
+import scipy.integrate
 import numpy as np
 
 
@@ -178,9 +176,8 @@ def simple_data_generator(model, observation_noise=0, **kwargs):
     solver_args = {**{"t_span": tspan, "y0": y0s[model]}, **kwargs}
 
     # Set up and solve!
-    model_func = lambda x, t, l: model(x, **model_kwargs)
-    model_obj = Model(model=model_func, parvec=[])
-    solution = model_obj.run_model(**solver_args)
+    model_func = lambda t,x: model(x, **model_kwargs)
+    solution = scipy.integrate.solve_ivp(model_func, **solver_args)
 
     vs = solution.y[0]
     noise = np.random.normal(0, observation_noise, vs.shape)
