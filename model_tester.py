@@ -6,60 +6,13 @@ import numpy as np
 import scipy.optimize
 
 import datagenerator as dg
+import hyperpars as hp
 
 import SingleCellCBC.gpr.gpr as mygpr
 import SingleCellCBC.gpr.kernels as mykernels
 
 
-GPR_SCHEMES = ["MySEKernel", "ModuloKernel", "CosineKernel", None]
-
-DEFAULT_HYPERPARS = {
-    ("HodgkinHuxley", "MySEKernel"): {
-        "sigma_f": 5.90466936e+01,
-        "l": 3.86948099e-02,
-    },  # Optimized, but possibly not very well
-
-    ("FitzhughNagumo", "MySEKernel"): {"sigma_f": 2.53347, "l": 1.14897},
-
-    ("HindmarshRose", "MySEKernel"): {}, #TODO
-
-    ("HRFast", "MySEKernel"): {}, # TODO  
-
-    ("HodgkinHuxley", "ModuloKernel"): { # TODO
-        "sigma_f": 5.90466936e+01,
-        "l": 0.05,
-        "period": 18,
-    }, 
-
-    ("FitzhughNagumo", "ModuloKernel"): { # Optimization was unsuccessful for this one
-        "sigma_f": 2.6,
-        "l": 0.3,
-        "period": 40
-    },  
-
-    ("HindmarshRose", "ModuloKernel"): { # TODO
-        "period": 450
-    },  
-
-    ("HRFast", "ModuloKernel"): {"period": 4.5},  # TODO
-
-    ("HodgkinHuxley", "CosineKernel"): { # TODO
-        "sigma_f": 5.90466936e+01,
-        "period": 18,
-    }, 
-
-    ("FitzhughNagumo", "CosineKernel"): { # TODO Unoptimized, but a fair guess
-        "sigma_f": 2.53347,
-        "l": 1.14887,
-        "period": 40
-    },  
-
-    ("HindmarshRose", "CosineKernel"): { # TODO
-        "period": 450
-    },  
-
-    ("HRFast", "CosineKernel"): {"period": 4.5},  # TODO
-}
+GPR_SCHEMES = ["MySEKernel", "ModuloKernel", "PeriodicKernel", None]
 
 
 def parse_args():
@@ -81,18 +34,25 @@ def parse_args():
         choices=GPR_SCHEMES,
     )
     parser.add_argument(
+        "--hypers",
+        "-p",
+        help="Hyperparameter set to use.",
+        default="NoiseFitted",
+        choices=["NoiseFitted", "CleanFitted"],
+    )
+    parser.add_argument(
         "--noise", "-n", help="Observation noise variance", default=0, type=float,
     )
     parser.add_argument(
         "--atol",
-        "--a",
+        "-a",
         help="Solver absolute error tolerance",
         default=1e-6,
         type=float,
     )
     parser.add_argument(
         "--rtol",
-        "--r",
+        "-r",
         help="Solver relative error tolerance",
         default=1e-3,
         type=float,
@@ -117,7 +77,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
 
     kerneltype = mykernels.KERNEL_NAMES[kernel.name]
     sigma_n = kernel.sigma_n
-    if kernel.name in ["PeriodicSEKernel", "CosineKernel"]:
+    if kernel.name in ["PeriodicSEKernel", "PeriodicKernel"]:
         # Optimize a periodic kernel
         # Could probably reuse some code with the other optimizer
         initial = np.sqrt(np.array([kernel.sigma_f, kernel.l[0], kernel._period]))
@@ -130,9 +90,13 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
             return -model.log_likelihood
 
         optimized = scipy.optimize.minimize(objective, initial, tol=1e-3)
-        print("Optimization success: {0}. {1}".format(optimized.success, optimized.message))
+        print(
+            "Optimization success: {0}. {1}".format(
+                optimized.success, optimized.message
+            )
+        )
         sigma_f, l, period = optimized.x ** 2
-        print(optimized.x **2)
+        print(optimized.x ** 2)
         print(
             "Fitted model: period: {0}, sigma_f: {1}, l: {2}".format(period, sigma_f, l)
         )
@@ -162,6 +126,9 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
 def main():
     args = parse_args()
 
+    if args.data == "HindmarshRose":
+        raise NotImplementedError("HindmarshRose is not implemented here.")
+
     # Generate some neuron training data
     ts, ys = dg.simple_data_generator(
         dg.DATASETS[args.data],
@@ -171,18 +138,25 @@ def main():
     )
     print("Working with {0} datapoints".format(len(ts)))
 
+    # Find hyperparameters
+    hyperset = (
+        hp.NOISE_FITTED_HYPERPARS
+        if args.hypers == "NoiseFitted"
+        else hp.CLEAN_FITTED_HYPERPARS
+    )
+
     # If we want one of the my-code GPRs...
-    if args.model in ["MySEKernel", "ModuloKernel", "CosineKernel"]:
+    if args.model in ["MySEKernel", "ModuloKernel", "PeriodicKernel"]:
         hyperpars = {
-            **DEFAULT_HYPERPARS[(args.data, args.model)],
+            **hyperset[(args.data, args.model)],
             "sigma_n": args.noise,
         }
         if args.model == "MySEKernel":
             kernel = mykernels.SEKernel(**hyperpars)
         elif args.model == "ModuloKernel":
             kernel = mykernels.PeriodicSEKernel(**hyperpars)
-        elif args.model == "CosineKernel":
-            kernel = mykernels.CosinePeriodicKernel(**hyperpars)
+        elif args.model == "PeriodicKernel":
+            kernel = mykernels.PeriodicKernel(**hyperpars)
         gpr_ts, gpr_ys = build_my_gpr(ts, ys, kernel, args.optimize)
 
     # If we want a GPR but it's not one I've set up yet...
