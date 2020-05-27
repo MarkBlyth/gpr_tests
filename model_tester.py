@@ -210,7 +210,9 @@ def main():
     if ts_test is not None:
         gpr_test_ys = model(ts_test)
         MSPE = np.mean((gpr_test_ys - ys_test)**2)
+        rMSPE = np.mean(((gpr_test_ys - ys_test)/ys_test)**2)
         print("MSPE: {0}, on {1} datapoints".format(MSPE, len(gpr_test_ys)))
+        print("rMSPE: {0}, on {1} datapoints".format(rMSPE, len(gpr_test_ys)))
 
     # Plot results
     fig, ax = plt.subplots()
