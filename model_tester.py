@@ -3,6 +3,7 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.random
 import scipy.optimize
 import scipy.io
 
@@ -79,6 +80,13 @@ def parse_args():
         default=0,
         type=float,
     )
+    parser.add_argument(
+        "--validate",
+        "-v",
+        help="If set, one third of the datapoints will be removed, and used to compute the mean square prediction error",
+        default=False,
+        action = "store_true",
+    )
     return parser.parse_args()
 
 
@@ -88,7 +96,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
     if not optimize:
         gpr_model = mygpr.GPR(data_x, data_y, kernel)
         print("Log likelihood = {0}".format(gpr_model.log_likelihood))
-        return ts, gpr_model(ts)
+        return ts, gpr_model
 
     kerneltype = mykernels.KERNEL_NAMES[kernel.name]
     sigma_n = kernel.sigma_n
@@ -135,7 +143,27 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
 
     model = mygpr.GPR(data_x, data_y, newkernel)
     print("Log likelihood = {0}".format(model.log_likelihood))
-    return ts, model(ts)
+    return ts, model
+
+
+def get_data(args):
+    # Generate some neuron training data
+    ts, ys = dg.simple_data_generator(
+        dg.DATASETS[args.data],
+        atol=args.atol,
+        rtol=args.rtol,
+        transients=args.transients,
+    )
+
+    ts_test, ys_test = None,None
+    if args.validate:
+        indices = np.arange(len(ys))
+        test_indices = (np.mod(indices, 3) == 0)
+        ts_test, ys_test = ts[test_indices], ys[test_indices]
+        ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
+
+    ys += np.random.normal(0, args.noise, ys.shape)
+    return ts, ys, ts_test, ys_test
 
 
 def main():
@@ -144,15 +172,7 @@ def main():
     if args.data == "HindmarshRose":
         raise NotImplementedError("HindmarshRose is not implemented here.")
 
-    # Generate some neuron training data
-    ts, ys = dg.simple_data_generator(
-        dg.DATASETS[args.data],
-        observation_noise=args.noise,
-        atol=args.atol,
-        rtol=args.rtol,
-        transients=args.transients,
-    )
-
+    ts,ys, ts_test,ys_test = get_data(args)
     print("Working with {0} datapoints".format(len(ts)))
 
     # Find hyperparameters
@@ -174,7 +194,8 @@ def main():
             kernel = mykernels.PeriodicSEKernel(**hyperpars)
         elif args.model == "PeriodicKernel":
             kernel = mykernels.PeriodicKernel(**hyperpars)
-        gpr_ts, gpr_ys = build_my_gpr(ts, ys, kernel, args.optimize)
+        gpr_ts, model = build_my_gpr(ts, ys, kernel, args.optimize)
+        gpr_ys = model(gpr_ts)
 
     # If we want a GPR but it's not one I've set up yet...
     elif args.model is not None:
@@ -183,11 +204,18 @@ def main():
     if args.save is not None:
         scipy.io.savemat(args.save + ".mat", dict(v=ys, t=ts))
 
+    if ts_test is not None:
+        gpr_test_ys = model(ts_test)
+        MSPE = np.mean((gpr_test_ys - ys_test)**2)
+        print("MSPE: {0}, on {1} datapoints".format(MSPE, len(gpr_test_ys)))
+
     # Plot results
     fig, ax = plt.subplots()
     ax.plot(ts, ys, label="Model simulation")
     if args.model is not None:
         ax.plot(gpr_ts, gpr_ys, label="GPR fit")
+        ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
+        ax.scatter(ts_test, ys_test, c="red", marker="X", label="Actual test points")
         ax.legend()
     plt.show()
 
