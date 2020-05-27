@@ -71,7 +71,7 @@ def parse_args():
         "-s",
         help="Save training data to a .mat file of specified filename",
         default=None,
-        type = str,
+        type=str,
     )
     parser.add_argument(
         "--transients",
@@ -85,7 +85,7 @@ def parse_args():
         "-v",
         help="If set, one third of the datapoints will be removed, and used to compute the mean square prediction error",
         default=False,
-        action = "store_true",
+        action="store_true",
     )
     return parser.parse_args()
 
@@ -103,7 +103,8 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
     if kernel.name in ["PeriodicSEKernel", "PeriodicKernel"]:
         # Optimize a periodic kernel
         # Could probably reuse some code with the other optimizer
-        initial = np.sqrt(np.array([kernel.sigma_f, kernel.l[0], kernel._period]))
+        initial = np.sqrt(
+            np.array([kernel.sigma_f, kernel.l[0], kernel._period]))
 
         def objective(pars):
             sigma_f, l, T = pars ** 2
@@ -121,7 +122,8 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
         sigma_f, l, period = optimized.x ** 2
         print(optimized.x ** 2)
         print(
-            "Fitted model: period: {0}, sigma_f: {1}, l: {2}".format(period, sigma_f, l)
+            "Fitted model: period: {0}, sigma_f: {1}, l: {2}".format(
+                period, sigma_f, l)
         )
         newkernel = kerneltype(period, sigma_n, sigma_f, l)
 
@@ -155,12 +157,13 @@ def get_data(args):
         transients=args.transients,
     )
 
-    ts_test, ys_test = None,None
+    ts_test, ys_test = None, None
     if args.validate:
         indices = np.arange(len(ys))
         test_indices = (np.mod(indices, 3) == 0)
         ts_test, ys_test = ts[test_indices], ys[test_indices]
-        ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
+        ts, ys = ts[np.logical_not(test_indices)
+                    ], ys[np.logical_not(test_indices)]
 
     ys += np.random.normal(0, args.noise, ys.shape)
     return ts, ys, ts_test, ys_test
@@ -172,7 +175,7 @@ def main():
     if args.data == "HindmarshRose":
         raise NotImplementedError("HindmarshRose is not implemented here.")
 
-    ts,ys, ts_test,ys_test = get_data(args)
+    ts, ys, ts_test, ys_test = get_data(args)
     print("Working with {0} datapoints".format(len(ts)))
 
     # Find hyperparameters
@@ -215,7 +218,8 @@ def main():
     if args.model is not None:
         ax.plot(gpr_ts, gpr_ys, label="GPR fit")
         ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
-        ax.scatter(ts_test, ys_test, c="red", marker="X", label="Actual test points")
+        ax.scatter(ts_test, ys_test, c="red", marker="X",
+                   label="Actual test points")
         ax.legend()
     plt.show()
 
