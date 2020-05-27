@@ -4,6 +4,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize
+import scipy.io
 
 import datagenerator as dg
 import hyperpars as hp
@@ -63,6 +64,20 @@ def parse_args():
         help="Optimize GPR model",
         default=False,
         action="store_true",
+    )
+    parser.add_argument(
+        "--save",
+        "-s",
+        help="Save data to a .mat file of given filename",
+        default=None,
+        type = str,
+    )
+    parser.add_argument(
+        "--transients",
+        "-t",
+        help="Pre-integrate for specified time, to allow transients to settle",
+        default=0,
+        type=float,
     )
     return parser.parse_args()
 
@@ -135,7 +150,9 @@ def main():
         observation_noise=args.noise,
         atol=args.atol,
         rtol=args.rtol,
+        transients=args.transients,
     )
+
     print("Working with {0} datapoints".format(len(ts)))
 
     # Find hyperparameters
@@ -162,6 +179,9 @@ def main():
     # If we want a GPR but it's not one I've set up yet...
     elif args.model is not None:
         raise NotImplementedError
+
+    if args.save is not None:
+        scipy.io.savemat(args.save + ".mat", dict(v=ys, t=ts))
 
     # Plot results
     fig, ax = plt.subplots()
