@@ -1,13 +1,14 @@
 import scipy.integrate
 import numpy as np
 
+
 def hodgkin_huxley(x, gk=80, Ek=-100, gna=100, Ena=50, gl=0.1, El=-67, I=1.75, C=1):
     """Right-hand side for the Hodgkin-Huxley equation.
 
         x: ndarray
             np array of the system state, of form [v,n,m,h]
 
-        **kwargs: 
+        **kwargs:
             Optional parameters. The parameters that can be modified,
             and their default values, are as follows:
                 gk : 36; potassium channel conductance
@@ -24,12 +25,12 @@ def hodgkin_huxley(x, gk=80, Ek=-100, gna=100, Ena=50, gl=0.1, El=-67, I=1.75, C
     v, n, m, h = x
 
     # Ion channel activations
-    alpha_m = lambda v: 0.32 * (v + 54) / (1 - np.exp(-(v + 54) / 4))
-    beta_m = lambda v: 0.28 * (v + 27) / (np.exp((v + 27) / 5) - 1)
-    alpha_h = lambda v: 0.128 * np.exp(-(50 + v) / 18)
-    beta_h = lambda v: 4 / (1 + np.exp(-(v + 27) / 5))
-    alpha_n = lambda v: 0.032 * (v + 52) / (1 - np.exp(-(v + 52) / 5))
-    beta_n = lambda v: 0.5 * np.exp(-(57 + v) / 40)
+    def alpha_m(v): return 0.32 * (v + 54) / (1 - np.exp(-(v + 54) / 4))
+    def beta_m(v): return 0.28 * (v + 27) / (np.exp((v + 27) / 5) - 1)
+    def alpha_h(v): return 0.128 * np.exp(-(50 + v) / 18)
+    def beta_h(v): return 4 / (1 + np.exp(-(v + 27) / 5))
+    def alpha_n(v): return 0.032 * (v + 52) / (1 - np.exp(-(v + 52) / 5))
+    def beta_n(v): return 0.5 * np.exp(-(57 + v) / 40)
 
     # Ion currents
     IK = gk * (n ** 4) * (v - Ek)
@@ -51,7 +52,7 @@ def fitzhugh_nagumo(x, I=1):
         x: ndarray
             np array of the system state, of form [v, w]
 
-        **kwargs: 
+        **kwargs:
             Optional parameters. The parameters that can be modified,
             and their default values, are as follows:
                 I : 0; applied current
@@ -70,7 +71,7 @@ def hindmarsh_rose(x, a=1, b=3, c=1, d=5, s=4, xr=-8 / 5, r=0.001, I=2):
         x: ndarray
             np array of the system state, of form [u,v,w]
 
-        **kwargs: 
+        **kwargs:
             Optional parameters. The parameters that can be modified,
             and their default values, are as follows:
                 xr : -8/5; dimensionless parameter
@@ -98,7 +99,7 @@ def hindmarsh_rose_fast(x, a=1, b=3, c=1, d=5, z=0, I=2):
         x: ndarray
             np array of the system state, of form [u,v]
 
-        **kwargs: 
+        **kwargs:
             Optional parameters. The parameters that can be modified,
             and their default values, are as follows:
                 I : 2; current-like parameter
@@ -126,7 +127,7 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
         model : function
             The defining RHS function for the neuron model of
             interest.
-    
+
         observation_noise : float>0
             Variance of a normally distributed random variable, added
             to the output retrospectively, to simulate observation
@@ -136,7 +137,7 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
             How long to pre-integrate for, to allow transients to die
             out
 
-        kwargs : 
+        kwargs :
             Any desired arguments. Arguments that match an argument
             available to the model function will be extracted and
             passed to the function, so model parameters can be set in
@@ -155,8 +156,9 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
     """
     # Extract the kwargs that were meant for the solver, and model
     # function
-    model_kwargs = {k: kwargs[k] for k in kwargs if k in model.__code__.co_varnames}
-    solver_kwargs = {k: kwargs[k] for k in kwargs if not k in model_kwargs}
+    model_kwargs = {k: kwargs[k]
+                    for k in kwargs if k in model.__code__.co_varnames}
+    solver_kwargs = {k: kwargs[k] for k in kwargs if k not in model_kwargs}
     # Define some default initial conditions for each model
     y0s = {
         fitzhugh_nagumo: np.array([0, 0]),
@@ -169,8 +171,9 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
         hindmarsh_rose: np.array([-transients, 1000]),
         fitzhugh_nagumo: np.array([-transients, 150]),
     }
-    tspan = t_spans[model] if model in t_spans else np.array([-transients, 100])
-    if not model in y0s:
+    tspan = t_spans[model] if model in t_spans else np.array(
+        [-transients, 100])
+    if model not in y0s:
         raise ValueError(
             "{0} is not a supported model type. Must be one of {1}".format(
                 model, y0s.keys()
@@ -178,16 +181,16 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
         )
     # Set up the default integration time and initial conditions,
     # allowing for kwargs to override these
-    solver_args = {**{"t_span": tspan, "y0": y0s[model]}, **kwargs}
+    solver_args = {**{"t_span": tspan, "y0": y0s[model]}, **solver_kwargs}
 
     # Set up and solve!
-    model_func = lambda t, x: model(x, **model_kwargs)
+    def model_func(t, x): return model(x, **model_kwargs)
     solution = scipy.integrate.solve_ivp(model_func, **solver_args)
 
-    vs = solution.y[0][solution.t>=0]
+    vs = solution.y[0][solution.t >= 0]
     noise = np.random.normal(0, observation_noise, vs.shape)
 
-    return solution.t[solution.t>=0], vs + noise
+    return solution.t[solution.t >= 0], vs + noise
 
 
 DATASETS = {
@@ -196,4 +199,3 @@ DATASETS = {
     "HindmarshRose": hindmarsh_rose,
     "HRFast": hindmarsh_rose_fast,
 }
-
