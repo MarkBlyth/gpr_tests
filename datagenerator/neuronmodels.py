@@ -167,6 +167,7 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
     t_spans = {
         hindmarsh_rose_fast: np.array([-transients, 20]),
         hindmarsh_rose: np.array([-transients, 1000]),
+        fitzhugh_nagumo: np.array([-transients, 150]),
     }
     tspan = t_spans[model] if model in t_spans else np.array([-transients, 100])
     if not model in y0s:
