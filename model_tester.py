@@ -217,6 +217,8 @@ def main():
     ax.plot(ts, ys, label="Model simulation")
     if args.model is not None:
         ax.plot(gpr_ts, gpr_ys, label="GPR fit")
+        ax.legend()
+    if args.validate:
         ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
         ax.scatter(ts_test, ys_test, c="red", marker="X",
                    label="Actual test points")
