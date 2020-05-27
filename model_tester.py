@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument(
         "--save",
         "-s",
-        help="Save data to a .mat file of given filename",
+        help="Save training data to a .mat file of specified filename",
         default=None,
         type = str,
     )
