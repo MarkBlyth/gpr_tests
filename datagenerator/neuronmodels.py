@@ -118,7 +118,7 @@ def hindmarsh_rose_fast(x, a=1, b=3, c=1, d=5, z=0, I=2):
     return hindmarsh_rose(new_x, a, b, c, d, I=I)[:-1]
 
 
-def simple_data_generator(model, observation_noise=0, **kwargs):
+def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
     """Model runner for simulating neurons. Default parameter values
     are used, unless set in **kwargs. Example initial conditions and
     integration bounds are used, unless set in **kwargs.
@@ -127,9 +127,14 @@ def simple_data_generator(model, observation_noise=0, **kwargs):
             The defining RHS function for the neuron model of
             interest.
     
-        observation_noise : float>0 Variance of a normally distributed
-            random variable, added to the output retrospectively, to
-            simulate observation noise.
+        observation_noise : float>0
+            Variance of a normally distributed random variable, added
+            to the output retrospectively, to simulate observation
+            noise.
+
+        transients : float>0
+            How long to pre-integrate for, to allow transients to die
+            out
 
         kwargs : 
             Any desired arguments. Arguments that match an argument
@@ -160,10 +165,10 @@ def simple_data_generator(model, observation_noise=0, **kwargs):
         hindmarsh_rose_fast: np.array([0, 0]),
     }
     t_spans = {
-        hindmarsh_rose_fast: np.array([0, 20]),
-        hindmarsh_rose: np.array([0, 1000]),
+        hindmarsh_rose_fast: np.array([-transients, 20]),
+        hindmarsh_rose: np.array([-transients, 1000]),
     }
-    tspan = t_spans[model] if model in t_spans else np.array([0, 100])
+    tspan = t_spans[model] if model in t_spans else np.array([-transients, 100])
     if not model in y0s:
         raise ValueError(
             "{0} is not a supported model type. Must be one of {1}".format(
@@ -178,10 +183,10 @@ def simple_data_generator(model, observation_noise=0, **kwargs):
     model_func = lambda t, x: model(x, **model_kwargs)
     solution = scipy.integrate.solve_ivp(model_func, **solver_args)
 
-    vs = solution.y[0]
+    vs = solution.y[0][solution.t>=0]
     noise = np.random.normal(0, observation_noise, vs.shape)
 
-    return solution.t, vs + noise
+    return solution.t[solution.t>=0], vs + noise
 
 
 DATASETS = {
