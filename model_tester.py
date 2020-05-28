@@ -9,12 +9,13 @@ import scipy.io
 
 import datagenerator as dg
 import hyperpars as hp
+import spectral_TEST as fkl
 
 import SingleCellCBC.gpr.gpr as mygpr
 import SingleCellCBC.gpr.kernels as mykernels
 
 
-GPR_SCHEMES = ["MySEKernel", "ModuloKernel", "PeriodicKernel", None]
+GPR_SCHEMES = ["FKL", "MySEKernel", "ModuloKernel", "PeriodicKernel", None]
 
 
 def parse_args():
@@ -87,16 +88,22 @@ def parse_args():
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--niters",
+        "-i",
+        help="Number of training iterations for functional kernel learning",
+        default=20,
+        type=int,
+    )
     return parser.parse_args()
 
 
 def build_my_gpr(data_x, data_y, kernel, optimize):
     # Build and fit model
-    ts = np.linspace(min(data_x), max(data_x), 10 * len(data_x))
     if not optimize:
         gpr_model = mygpr.GPR(data_x, data_y, kernel)
         print("Log likelihood = {0}".format(gpr_model.log_likelihood))
-        return ts, gpr_model
+        return gpr_model
 
     kerneltype = mykernels.KERNEL_NAMES[kernel.name]
     sigma_n = kernel.sigma_n
@@ -145,7 +152,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
 
     model = mygpr.GPR(data_x, data_y, newkernel)
     print("Log likelihood = {0}".format(model.log_likelihood))
-    return ts, model
+    return model
 
 
 def get_data(args):
@@ -176,6 +183,7 @@ def main():
         raise NotImplementedError("HindmarshRose is not implemented here.")
 
     ts, ys, ts_test, ys_test = get_data(args)
+    gpr_ts = np.linspace(min(ts), max(ts), 10 * len(ts))
     print("Working with {0} datapoints".format(len(ts)))
 
     # Find hyperparameters
@@ -197,7 +205,11 @@ def main():
             kernel = mykernels.PeriodicSEKernel(**hyperpars)
         elif args.model == "PeriodicKernel":
             kernel = mykernels.PeriodicKernel(**hyperpars)
-        gpr_ts, model = build_my_gpr(ts, ys, kernel, args.optimize)
+        model = build_my_gpr(ts, ys, kernel, args.optimize)
+        gpr_ys = model(gpr_ts)
+
+    if args.model == "FKL":
+        model = fkl.run(ts, ys, ts_test, ys_test,n_iters=args.niters)
         gpr_ys = model(gpr_ts)
 
     # If we want a GPR but it's not one I've set up yet...
