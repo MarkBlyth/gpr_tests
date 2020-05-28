@@ -1,3 +1,6 @@
 [submodule "SingleCellCBC"]
 	path = SingleCellCBC
 	url = https://github.com/MarkBlyth/SingleCellCBC.git
+[submodule "spectralgp"]
+	path = spectralgp
+	url = https://github.com/MarkBlyth/spectralgp.git
