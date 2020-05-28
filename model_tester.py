@@ -9,7 +9,7 @@ import scipy.io
 
 import datagenerator as dg
 import hyperpars as hp
-import spectral_TEST as fkl
+import spectralrunner as fkl
 
 import SingleCellCBC.gpr.gpr as mygpr
 import SingleCellCBC.gpr.kernels as mykernels
