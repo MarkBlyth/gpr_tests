@@ -5,5 +5,5 @@
 	path = spectralgp
 	url = https://github.com/MarkBlyth/spectralgp.git
 [submodule "nssm-gp"]
-	path = nssm-gp
+	path = nssm_gp
 	url = https://github.com/sremes/nssm-gp.git
