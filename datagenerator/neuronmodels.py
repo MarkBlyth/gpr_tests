@@ -172,7 +172,7 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
         fitzhugh_nagumo: np.array([-transients, 150]),
     }
     tspan = t_spans[model] if model in t_spans else np.array(
-        [-transients, 100])
+        [-transients, 50])
     if model not in y0s:
         raise ValueError(
             "{0} is not a supported model type. Must be one of {1}".format(
