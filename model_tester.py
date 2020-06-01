@@ -6,16 +6,32 @@ import numpy as np
 import numpy.random
 import scipy.optimize
 import scipy.io
+import sklearn.svm
 
 import datagenerator as dg
 import hyperpars as hp
 import spectralrunner as fkl
+import nssmrunner as nssm
 
 import SingleCellCBC.gpr.gpr as mygpr
 import SingleCellCBC.gpr.kernels as mykernels
 
 
-GPR_SCHEMES = ["FKL", "MySEKernel", "ModuloKernel", "PeriodicKernel", None]
+GPR_SCHEMES = [
+    "gsm",
+    "sm",
+    "rbf",
+    "neural",
+    "SVR",
+    "FKL",
+    "MySEKernel",
+    "ModuloKernel",
+    "PeriodicKernel",
+    "Matern32",
+    "PeriodicMatern32",
+    "Matern52",
+    None,
+]
 
 
 def parse_args():
@@ -44,7 +60,11 @@ def parse_args():
         choices=["NoiseFitted", "CleanFitted"],
     )
     parser.add_argument(
-        "--noise", "-n", help="Observation noise variance", default=0, type=float,
+        "--noise",
+        "-n",
+        help="Observation noise variance",
+        default=0,
+        type=float,
     )
     parser.add_argument(
         "--atol",
@@ -100,6 +120,8 @@ def parse_args():
 
 def build_my_gpr(data_x, data_y, kernel, optimize):
     # Build and fit model
+    kerneltype = mykernels.KERNEL_NAMES[kernel.name]
+    print("Using kernel {0}".format(kerneltype))
     if not optimize:
         gpr_model = mygpr.GPR(data_x, data_y, kernel)
         print("Log likelihood = {0}".format(gpr_model.log_likelihood))
@@ -107,7 +129,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
 
     kerneltype = mykernels.KERNEL_NAMES[kernel.name]
     sigma_n = kernel.sigma_n
-    if kernel.name in ["PeriodicSEKernel", "PeriodicKernel"]:
+    if kernel.name in ["PeriodicSEKernel", "PeriodicKernel", "PeriodicMatern32"]:
         # Optimize a periodic kernel
         # Could probably reuse some code with the other optimizer
         initial = np.sqrt(
@@ -167,7 +189,7 @@ def get_data(args):
     ts_test, ys_test = None, None
     if args.validate:
         indices = np.arange(len(ys))
-        test_indices = (np.mod(indices, 3) == 0)
+        test_indices = np.mod(indices, 3) == 0
         ts_test, ys_test = ts[test_indices], ys[test_indices]
         ts, ys = ts[np.logical_not(test_indices)
                     ], ys[np.logical_not(test_indices)]
@@ -194,7 +216,7 @@ def main():
     )
 
     # If we want one of the my-code GPRs...
-    if args.model in ["MySEKernel", "ModuloKernel", "PeriodicKernel"]:
+    if args.model in ["MySEKernel", "ModuloKernel", "PeriodicKernel", "Matern32", "Matern52", "PeriodicMatern32"]:
         hyperpars = {
             **hyperset[(args.data, args.model)],
             "sigma_n": args.noise,
@@ -205,11 +227,41 @@ def main():
             kernel = mykernels.PeriodicSEKernel(**hyperpars)
         elif args.model == "PeriodicKernel":
             kernel = mykernels.PeriodicKernel(**hyperpars)
+        elif args.model == "Matern32":
+            kernel = mykernels.Matern32(**hyperpars)
+        elif args.model == "PeriodicMatern32":
+            kernel = mykernels.PeriodicMatern32(**hyperpars)
+        elif args.model == "Matern52":
+            kernel = mykernels.Matern52(**hyperpars)
         model = build_my_gpr(ts, ys, kernel, args.optimize)
         gpr_ys = model(gpr_ts)
 
-    if args.model == "FKL":
-        model = fkl.run(ts, ys, ts_test, ys_test,n_iters=args.niters)
+    elif args.model == "FKL":
+        model = fkl.run(ts, ys, ts_test, ys_test, n_iters=args.niters)
+        gpr_ys = model(gpr_ts)
+
+    elif args.model == "SVR":
+        raise NotImplementedError("No hyperpameters have been fitted yet")
+        ts = ts.reshape((-1, 1))
+        svr = sklearn.svm.SVR(
+            kernel="rbf",
+            C=1,
+            gamma=0.1,
+            epsilon=2 * args.noise + 1e-6  # FH
+            # kernel="rbf", C=100, gamma=10, epsilon=2 * args.noise + 1e-6 # HR
+        )
+        svr.fit(ts, ys)
+
+        def model(x):
+            x_reshaped = x.reshape((-1, 1))
+            prediction = svr.predict(x_reshaped)
+            prediction.squeeze()
+            return prediction
+
+        gpr_ys = model(gpr_ts)
+
+    elif args.model in ["gsm", "sm", "rbf", "neural"]:
+        model = nssm.run(ts, ys, args.model, noise=args.noise)
         gpr_ys = model(gpr_ts)
 
     # If we want a GPR but it's not one I've set up yet...
@@ -221,8 +273,8 @@ def main():
 
     if ts_test is not None:
         gpr_test_ys = model(ts_test)
-        MSPE = np.mean((gpr_test_ys - ys_test)**2)
-        rMSPE = np.mean(((gpr_test_ys - ys_test)/ys_test)**2)
+        MSPE = np.mean((gpr_test_ys - ys_test) ** 2)
+        rMSPE = np.mean(((gpr_test_ys - ys_test) / ys_test) ** 2)
         print("MSPE: {0}, on {1} datapoints".format(MSPE, len(gpr_test_ys)))
         print("rMSPE: {0}, on {1} datapoints".format(rMSPE, len(gpr_test_ys)))
 
