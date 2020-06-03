@@ -12,6 +12,7 @@ import datagenerator as dg
 import hyperpars as hp
 import spectralrunner as fkl
 import nssmrunner as nssm
+import BarsNWrapper.wrapper as wrapper
 
 import SingleCellCBC.gpr.gpr as mygpr
 import SingleCellCBC.gpr.kernels as mykernels
@@ -30,6 +31,7 @@ GPR_SCHEMES = [
     "Matern32",
     "PeriodicMatern32",
     "Matern52",
+    "BARS",
     None,
 ]
 
@@ -263,6 +265,11 @@ def main():
     elif args.model in ["gsm", "sm", "rbf", "neural"]:
         model = nssm.run(ts, ys, args.model, noise=args.noise)
         gpr_ys = model(gpr_ts)
+
+    elif args.model == "BARS":
+        smoothed_ts, smoothed_xs, new_ts, new_xs = wrapper.barsN(ts, ys)
+        gpr_ys = smoothed_xs
+        gpr_ts = smoothed_ts
 
     # If we want a GPR but it's not one I've set up yet...
     elif args.model is not None:
