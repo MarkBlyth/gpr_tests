@@ -7,3 +7,6 @@
 [submodule "nssm-gp"]
 	path = nssm_gp
 	url = https://github.com/sremes/nssm-gp.git
+[submodule "BarsNWrapper"]
+	path = BarsNWrapper
+	url = https://github.com/MarkBlyth/BarsNWrapper.git
