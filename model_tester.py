@@ -39,17 +39,18 @@ GPR_SCHEMES = [
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="""Run experiment
+    parser = argparse.ArgumentParser(
+        description="""Run experiment
 using a data generator and a GPR scheme. The chosen data can be
 either a model, which will be simulated, or a datafile. Datafiles
 must be a saved np array, with the first row being the sample
 times, and the second row being the recorded data. Models to
-available to simulate are {0}""".format(dg.DATASETS.keys()))
+available to simulate are {0}""".format(
+            dg.DATASETS.keys()
+        )
+    )
     parser.add_argument(
-        "--data",
-        "-d",
-        help="Dataset to use",
-        required=True,
+        "--data", "-d", help="Dataset to use", required=True,
     )
     parser.add_argument(
         "--model",
@@ -66,11 +67,7 @@ available to simulate are {0}""".format(dg.DATASETS.keys()))
         choices=["NoiseFitted", "CleanFitted"],
     )
     parser.add_argument(
-        "--noise",
-        "-n",
-        help="Observation noise variance",
-        default=0,
-        type=float,
+        "--noise", "-n", help="Observation noise variance", default=0, type=float,
     )
     parser.add_argument(
         "--atol",
@@ -115,6 +112,13 @@ available to simulate are {0}""".format(dg.DATASETS.keys()))
         action="store_true",
     )
     parser.add_argument(
+        "-T",
+        "--tests",
+        help="Number of latent testpoints to evaluate the GP at",
+        default=100,
+        type=int,
+    )
+    parser.add_argument(
         "--niters",
         "-i",
         help="Number of training iterations for functional kernel learning",
@@ -126,7 +130,7 @@ available to simulate are {0}""".format(dg.DATASETS.keys()))
         "-D",
         help="Downsample the training data using [::D]",
         type=int,
-        default=None
+        default=None,
     )
     parser.add_argument(
         "--period",
@@ -169,8 +173,10 @@ def get_hypers(args):
         hyperpars["period"] = args.period
     if args.lengthscale is not None:
         hyperpars["l"] = args.lengthscale
-    if "l" not in hyperset or "sigma_f" not in hyperset or "period" not in hyperset:
-        warnings.warn("One of l, sigma_f, period is not set. Will produce errors if a model requires them")
+    if "l" not in hyperpars or "sigma_f" not in hyperpars or "period" not in hyperpars:
+        warnings.warn(
+            "One of l, sigma_f, period is not set. Will produce errors if a model requires them"
+        )
     hyperpars["sigma_n"] = args.noise
     return hyperpars
 
@@ -189,8 +195,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
     if kernel.name in ["PeriodicSEKernel", "PeriodicKernel", "PeriodicMatern32"]:
         # Optimize a periodic kernel
         # Could probably reuse some code with the other optimizer
-        initial = np.sqrt(
-            np.array([kernel.sigma_f, kernel.l[0], kernel._period]))
+        initial = np.sqrt(np.array([kernel.sigma_f, kernel.l[0], kernel._period]))
 
         def objective(pars):
             sigma_f, l, T = pars ** 2
@@ -208,8 +213,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
         sigma_f, l, period = optimized.x ** 2
         print(optimized.x ** 2)
         print(
-            "Fitted model: period: {0}, sigma_f: {1}, l: {2}".format(
-                period, sigma_f, l)
+            "Fitted model: period: {0}, sigma_f: {1}, l: {2}".format(period, sigma_f, l)
         )
         newkernel = kerneltype(period, sigma_n, sigma_f, l)
 
@@ -248,8 +252,7 @@ def get_data(args):
         indices = np.arange(len(ys))
         test_indices = np.mod(indices, 3) == 0
         ts_test, ys_test = ts[test_indices], ys[test_indices]
-        ts, ys = ts[np.logical_not(test_indices)
-                    ], ys[np.logical_not(test_indices)]
+        ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
 
     ys += np.random.normal(0, args.noise, ys.shape)
     return ts, ys, ts_test, ys_test
@@ -258,32 +261,43 @@ def get_data(args):
 def main():
     args = parse_args()
 
+    # TODO put this block into get_data
     if args.data not in dg.DATASETS.keys():
         # Using a datafile instead of a model
         if not os.path.isfile(args.data):
-            raise FileNotFoundError("data not a specified model and not an existing datafile")
-        warnings.warn("Noise level sigma_n is not a trainable parameter in this script. Appropriate values must be estimated when working with real data.")
+            raise FileNotFoundError(
+                "data not a specified model and not an existing datafile"
+            )
+        warnings.warn(
+            "Noise level sigma_n is not a trainable parameter in this script. Appropriate values must be estimated when working with real data."
+        )
         ts, ys = np.load(args.data)
         ts_test, ys_test = None, None
         if args.validate:
             indices = np.arange(len(ys))
             test_indices = np.mod(indices, 3) == 0
             ts_test, ys_test = ts[test_indices], ys[test_indices]
-            ts, ys = ts[np.logical_not(test_indices)
-                        ], ys[np.logical_not(test_indices)]
+            ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
     else:
         ts, ys, ts_test, ys_test = get_data(args)
     if args.downsample is not None:
-        ts = ts[::args.downsample]
-        ys = ys[::args.downsample]
-    gpr_ts = np.linspace(min(ts), max(ts), 10 * len(ts))
+        ts = ts[:: args.downsample]
+        ys = ys[:: args.downsample]
+    gpr_ts = np.linspace(min(ts), max(ts), args.tests)
 
     print("Working with {0} datapoints".format(len(ts)))
 
     hyperpars = get_hypers(args)
-    
+
     # If we want one of the my-code GPRs...
-    if args.model in ["MySEKernel", "ModuloKernel", "PeriodicKernel", "Matern32", "Matern52", "PeriodicMatern32"]:
+    if args.model in [
+        "MySEKernel",
+        "ModuloKernel",
+        "PeriodicKernel",
+        "Matern32",
+        "Matern52",
+        "PeriodicMatern32",
+    ]:
         if args.model == "MySEKernel":
             kernel = mykernels.SEKernel(**hyperpars)
         elif args.model == "ModuloKernel":
@@ -351,13 +365,26 @@ def main():
     # Plot results
     fig, ax = plt.subplots()
     ax.plot(ts, ys, label="Model simulation")
+    try:
+        if isinstance(model, mygpr.GPR):
+            print("Finding variance")
+            variance = 2 * np.diag(model.get_variance(gpr_ts))
+            ax.fill_between(
+                gpr_ts,
+                gpr_ys - variance,
+                gpr_ys + variance,
+                label="2-sigma Variance",
+                alpha=0.5,
+            )
+    except NameError:
+        # No model defined
+        pass
     if args.model is not None:
         ax.plot(gpr_ts, gpr_ys, label="{0} fit".format(args.model))
         ax.legend()
     if args.validate:
         ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
-        ax.scatter(ts_test, ys_test, c="red", marker="X",
-                   label="Actual test points")
+        ax.scatter(ts_test, ys_test, c="red", marker="X", label="Actual test points")
         ax.legend()
     plt.show()
 
