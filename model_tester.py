@@ -262,6 +262,7 @@ def main():
         # Using a datafile instead of a model
         if not os.path.isfile(args.data):
             raise FileNotFoundError("data not a specified model and not an existing datafile")
+        warnings.warn("Noise level sigma_n is not a trainable parameter in this script. Appropriate values must be estimated when working with real data.")
         ts, ys = np.load(args.data)
         ts_test, ys_test = None, None
         if args.validate:
@@ -351,7 +352,7 @@ def main():
     fig, ax = plt.subplots()
     ax.plot(ts, ys, label="Model simulation")
     if args.model is not None:
-        ax.plot(gpr_ts, gpr_ys, label="GPR fit")
+        ax.plot(gpr_ts, gpr_ys, label="{0} fit".format(args.model))
         ax.legend()
     if args.validate:
         ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
