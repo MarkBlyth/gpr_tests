@@ -7,6 +7,8 @@ import numpy.random
 import scipy.optimize
 import scipy.io
 import sklearn.svm
+import os.path
+import warnings
 
 import datagenerator as dg
 import hyperpars as hp
@@ -37,14 +39,16 @@ GPR_SCHEMES = [
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Run experiment using a data generator and a GPR scheme."
-    )
+    parser = argparse.ArgumentParser(description="""Run experiment
+using a data generator and a GPR scheme. The chosen data can be
+either a model, which will be simulated, or a datafile. Datafiles
+must be a saved np array, with the first row being the sample
+times, and the second row being the recorded data. Models to
+available to simulate are {0}""".format(dg.DATASETS.keys()))
     parser.add_argument(
         "--data",
         "-d",
         help="Dataset to use",
-        choices=list(dg.DATASETS.keys()),
         required=True,
     )
     parser.add_argument(
@@ -117,7 +121,58 @@ def parse_args():
         default=20,
         type=int,
     )
+    parser.add_argument(
+        "--downsample",
+        "-D",
+        help="Downsample the training data using [::D]",
+        type=int,
+        default=None
+    )
+    parser.add_argument(
+        "--period",
+        "-P",
+        help="Override signal period with this value, for periodic kernels",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--sigmaf",
+        "-f",
+        help="Override sigma_f with this value",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--lengthscale",
+        "-l",
+        help="Override l with this value",
+        type=float,
+        default=None,
+    )
     return parser.parse_args()
+
+
+def get_hypers(args):
+    # Find hyperparameters
+    if args.hypers == "NoiseFitted":
+        hyperset = hp.NOISE_FITTED_HYPERPARS
+    else:
+        hyperset = hp.CLEAN_FITTED_HYPERPARS
+    try:
+        hyperpars = hyperset[(args.data, args.model)]
+    except KeyError:
+        hyperpars = {}
+        warnings.warn("No hyperparameters found, falling back to args")
+    if args.sigmaf is not None:
+        hyperpars["sigma_f"] = args.sigmaf
+    if args.period is not None:
+        hyperpars["period"] = args.period
+    if args.lengthscale is not None:
+        hyperpars["l"] = args.lengthscale
+    if "l" not in hyperset or "sigma_f" not in hyperset or "period" not in hyperset:
+        warnings.warn("One of l, sigma_f, period is not set. Will produce errors if a model requires them")
+    hyperpars["sigma_n"] = args.noise
+    return hyperpars
 
 
 def build_my_gpr(data_x, data_y, kernel, optimize):
@@ -203,26 +258,31 @@ def get_data(args):
 def main():
     args = parse_args()
 
-    if args.data == "HindmarshRose":
-        raise NotImplementedError("HindmarshRose is not implemented here.")
-
-    ts, ys, ts_test, ys_test = get_data(args)
+    if args.data not in dg.DATASETS.keys():
+        # Using a datafile instead of a model
+        if not os.path.isfile(args.data):
+            raise FileNotFoundError("data not a specified model and not an existing datafile")
+        ts, ys = np.load(args.data)
+        ts_test, ys_test = None, None
+        if args.validate:
+            indices = np.arange(len(ys))
+            test_indices = np.mod(indices, 3) == 0
+            ts_test, ys_test = ts[test_indices], ys[test_indices]
+            ts, ys = ts[np.logical_not(test_indices)
+                        ], ys[np.logical_not(test_indices)]
+    else:
+        ts, ys, ts_test, ys_test = get_data(args)
+    if args.downsample is not None:
+        ts = ts[::args.downsample]
+        ys = ys[::args.downsample]
     gpr_ts = np.linspace(min(ts), max(ts), 10 * len(ts))
+
     print("Working with {0} datapoints".format(len(ts)))
 
-    # Find hyperparameters
-    hyperset = (
-        hp.NOISE_FITTED_HYPERPARS
-        if args.hypers == "NoiseFitted"
-        else hp.CLEAN_FITTED_HYPERPARS
-    )
-
+    hyperpars = get_hypers(args)
+    
     # If we want one of the my-code GPRs...
     if args.model in ["MySEKernel", "ModuloKernel", "PeriodicKernel", "Matern32", "Matern52", "PeriodicMatern32"]:
-        hyperpars = {
-            **hyperset[(args.data, args.model)],
-            "sigma_n": args.noise,
-        }
         if args.model == "MySEKernel":
             kernel = mykernels.SEKernel(**hyperpars)
         elif args.model == "ModuloKernel":
@@ -236,6 +296,7 @@ def main():
         elif args.model == "Matern52":
             kernel = mykernels.Matern52(**hyperpars)
         model = build_my_gpr(ts, ys, kernel, args.optimize)
+        print("Evaluating at {0} latent points".format(len(gpr_ts)))
         gpr_ys = model(gpr_ts)
 
     elif args.model == "FKL":
@@ -285,6 +346,7 @@ def main():
         print("MSPE: {0}, on {1} datapoints".format(MSPE, len(gpr_test_ys)))
         print("rMSPE: {0}, on {1} datapoints".format(rMSPE, len(gpr_test_ys)))
 
+    print("Generating plot")
     # Plot results
     fig, ax = plt.subplots()
     ax.plot(ts, ys, label="Model simulation")
