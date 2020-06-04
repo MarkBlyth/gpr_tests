@@ -241,30 +241,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
     return model
 
 
-def get_data(args):
-    # Generate some neuron training data
-    ts, ys = dg.simple_data_generator(
-        dg.DATASETS[args.data],
-        atol=args.atol,
-        rtol=args.rtol,
-        transients=args.transients,
-    )
-
-    ts_test, ys_test = None, None
-    if args.validate:
-        indices = np.arange(len(ys))
-        test_indices = np.mod(indices, 3) == 0
-        ts_test, ys_test = ts[test_indices], ys[test_indices]
-        ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
-
-    ys += np.random.normal(0, args.noise, ys.shape)
-    return ts, ys, ts_test, ys_test
-
-
-def main():
-    args = parse_args()
-
-    # TODO put this block into get_data
+def get_data(args, noise, to_validate):
     if args.data not in dg.DATASETS.keys():
         # Using a datafile instead of a model
         if not os.path.isfile(args.data):
@@ -275,44 +252,44 @@ def main():
             "Noise level sigma_n is not a trainable parameter in this script. Appropriate values must be estimated when working with real data."
         )
         ts, ys = np.load(args.data)
-        ts_test, ys_test = None, None
-        if args.validate:
-            indices = np.arange(len(ys))
-            test_indices = np.mod(indices, 3) == 0
-            ts_test, ys_test = ts[test_indices], ys[test_indices]
-            ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
     else:
-        ts, ys, ts_test, ys_test = get_data(args)
+        # Generate some neuron training data
+        ts, ys = dg.simple_data_generator(
+            dg.DATASETS[args.data],
+            atol=args.atol,
+            rtol=args.rtol,
+            transients=args.transients,
+        )
+        ys += np.random.normal(0, noise, ys.shape)
+
+    # Downsample training data, if needed
     if args.downsample is not None:
         ts = ts[:: args.downsample]
         ys = ys[:: args.downsample]
+
+    # Split up into test and training data, if needed
+    ts_test, ys_test = None, None
+    if to_validate:
+        indices = np.arange(len(ys))
+        test_indices = np.mod(indices, 3) == 0
+        ts_test, ys_test = ts[test_indices], ys[test_indices]
+        ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
+
+    # Points to evaluate a model at
     gpr_ts = np.linspace(min(ts), max(ts), args.tests)
 
+    return ts, ys, ts_test, ys_test, gpr_ts
+
+
+def main():
+    args = parse_args()
+    hyperpars = get_hypers(args)
+    ts, ys, ts_test, ys_test, gpr_ts = get_data(args, args.noise, args.validate)
     print("Working with {0} datapoints".format(len(ts)))
 
-    hyperpars = get_hypers(args)
-
     # If we want one of the my-code GPRs...
-    if args.model in [
-        "MySEKernel",
-        "ModuloKernel",
-        "PeriodicKernel",
-        "Matern32",
-        "Matern52",
-        "PeriodicMatern32",
-    ]:
-        if args.model == "MySEKernel":
-            kernel = mykernels.SEKernel(**hyperpars)
-        elif args.model == "ModuloKernel":
-            kernel = mykernels.PeriodicSEKernel(**hyperpars)
-        elif args.model == "PeriodicKernel":
-            kernel = mykernels.PeriodicKernel(**hyperpars)
-        elif args.model == "Matern32":
-            kernel = mykernels.Matern32(**hyperpars)
-        elif args.model == "PeriodicMatern32":
-            kernel = mykernels.PeriodicMatern32(**hyperpars)
-        elif args.model == "Matern52":
-            kernel = mykernels.Matern52(**hyperpars)
+    if args.model in mykernels.KERNEL_NAMES:
+        kernel = mykernels.KERNEL_NAMES[args.model](**hyperpars)
         model = build_my_gpr(ts, ys, kernel, args.optimize)
         print("Evaluating at {0} latent points".format(len(gpr_ts)))
         gpr_ys = model(gpr_ts)
@@ -369,9 +346,8 @@ def main():
     fig, ax = plt.subplots()
     # Generate and plot noise-free data, if working with noised simulations
     if args.noise != 0 and args.data in dg.DATASETS.keys() and args.model is not None:
-        args.noise = 0
         args.validate = False
-        clean_ts, clean_ys, _, _ = get_data(args)
+        clean_ts, clean_ys, _, _, _ = get_data(args, noise=0, to_validate=False)
         ax.plot(clean_ts, clean_ys, "k--", label="Noise-free signal", alpha=0.5)
     # Plot (possibly noised) simulation
     ax.plot(ts, ys, label="Model simulation")
@@ -379,12 +355,13 @@ def main():
     try:
         if isinstance(model, mygpr.GPR) and args.var:
             print("Finding variance")
-            variance = 2 * np.diag(model.get_variance(gpr_ts))
+            variance = np.diag(model.get_variance(gpr_ts))
+            twosigma = 2 * np.sqrt(np.abs(variance))
             ax.fill_between(
                 gpr_ts,
-                gpr_ys - variance,
-                gpr_ys + variance,
-                label="2-sigma Variance",
+                gpr_ys - twosigma,
+                gpr_ys + twosigma,
+                label=r"$2\sigma$ bounds",
                 alpha=0.5,
             )
     except NameError:
