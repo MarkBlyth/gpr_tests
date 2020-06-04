@@ -93,7 +93,7 @@ available to simulate are {0}""".format(
     parser.add_argument(
         "--save",
         "-s",
-        help="Save training data to a .mat file of specified filename",
+        help="Save resulting plot with this name, instead of showing it",
         default=None,
         type=str,
     )
@@ -331,9 +331,6 @@ def main():
     elif args.model is not None:
         raise NotImplementedError
 
-    if args.save is not None:
-        scipy.io.savemat(args.save + ".mat", dict(v=ys, t=ts))
-
     if ts_test is not None:
         gpr_test_ys = model(ts_test)
         MSPE = np.mean((gpr_test_ys - ys_test) ** 2)
@@ -376,7 +373,10 @@ def main():
     if args.model is not None:
         ax.plot(gpr_ts, gpr_ys, label="{0} fit".format(args.model))
         ax.legend()
-    plt.show()
+    if args.save is not None:
+        plt.savefig(args.save)
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
