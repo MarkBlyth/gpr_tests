@@ -153,6 +153,9 @@ available to simulate are {0}""".format(
         type=float,
         default=None,
     )
+    parser.add_argument(
+        "--var", "-V", help="Plot variance bands, where available", action="store_true",
+    )
     return parser.parse_args()
 
 
@@ -364,9 +367,17 @@ def main():
     print("Generating plot")
     # Plot results
     fig, ax = plt.subplots()
+    # Generate and plot noise-free data, if working with noised simulations
+    if args.noise != 0 and args.data in dg.DATASETS.keys() and args.model is not None:
+        args.noise = 0
+        args.validate = False
+        clean_ts, clean_ys, _, _ = get_data(args)
+        ax.plot(clean_ts, clean_ys, "k--", label="Noise-free signal", alpha=0.5)
+    # Plot (possibly noised) simulation
     ax.plot(ts, ys, label="Model simulation")
+    # Plot variance bands, if appropriate
     try:
-        if isinstance(model, mygpr.GPR):
+        if isinstance(model, mygpr.GPR) and args.var:
             print("Finding variance")
             variance = 2 * np.diag(model.get_variance(gpr_ts))
             ax.fill_between(
@@ -379,12 +390,14 @@ def main():
     except NameError:
         # No model defined
         pass
-    if args.model is not None:
-        ax.plot(gpr_ts, gpr_ys, label="{0} fit".format(args.model))
-        ax.legend()
+    # Plot validation points, if appropriate
     if args.validate:
         ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
         ax.scatter(ts_test, ys_test, c="red", marker="X", label="Actual test points")
+        ax.legend()
+    # Plot model fit, if appropriate
+    if args.model is not None:
+        ax.plot(gpr_ts, gpr_ys, label="{0} fit".format(args.model))
         ax.legend()
     plt.show()
 
