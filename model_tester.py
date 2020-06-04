@@ -25,7 +25,6 @@ GPR_SCHEMES = [
     "sm",
     "rbf",
     "neural",
-    "SVR",
     "FKL",
     "MySEKernel",
     "ModuloKernel",
@@ -298,26 +297,6 @@ def main():
         model = fkl.run(ts, ys, ts_test, ys_test, n_iters=args.niters)
         gpr_ys = model(gpr_ts)
 
-    elif args.model == "SVR":
-        raise NotImplementedError("No hyperpameters have been fitted yet")
-        ts = ts.reshape((-1, 1))
-        svr = sklearn.svm.SVR(
-            kernel="rbf",
-            C=1,
-            gamma=0.1,
-            epsilon=2 * args.noise + 1e-6  # FH
-            # kernel="rbf", C=100, gamma=10, epsilon=2 * args.noise + 1e-6 # HR
-        )
-        svr.fit(ts, ys)
-
-        def model(x):
-            x_reshaped = x.reshape((-1, 1))
-            prediction = svr.predict(x_reshaped)
-            prediction.squeeze()
-            return prediction
-
-        gpr_ys = model(gpr_ts)
-
     elif args.model in ["gsm", "sm", "rbf", "neural"]:
         model = nssm.run(ts, ys, args.model, noise=args.noise)
         gpr_ys = model(gpr_ts)
@@ -326,10 +305,6 @@ def main():
         smoothed_ts, smoothed_xs, new_ts, new_xs = wrapper.barsN(ts, ys)
         gpr_ys = smoothed_xs
         gpr_ts = smoothed_ts
-
-    # If we want a GPR but it's not one I've set up yet...
-    elif args.model is not None:
-        raise NotImplementedError
 
     if ts_test is not None:
         gpr_test_ys = model(ts_test)
