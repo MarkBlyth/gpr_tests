@@ -32,7 +32,7 @@ _fitzhugh_nagumo_noisy = {
         "period": 36.99430406,
     },
     # Sigma_n = 0.1. LL = -288.997 at rtol=1e-6.
-    ("FitzhughNagumo", "MySEKernel"): {
+    ("FitzhughNagumo", "SEKernel"): {
         "sigma_f": 4.7271724,
         "l": 5.01367266,
     },
@@ -60,7 +60,7 @@ _hindmarsh_rose_fast_noisy = {
     },
     # Sigma_n = 0.05. LL = -277 at rtol=1e-6 (noise-free -1,120,449,
     # bad fit)
-    ("HRFast", "MySEKernel"): {
+    ("HRFast", "SEKernel"): {
         "sigma_f": 5.182069020807821,
         "l": 0.27973214754870057,
     },
@@ -87,7 +87,7 @@ _hodgkin_huxley_noisy = {
     # Attempted optimization with sigma_n = 2. Bad LL, but params
     # stopped changing. Possibly near a saddle point? LL=-6170
     # (noise-free -175,468,920)
-    ("HodgkinHuxley", "MySEKernel"): {
+    ("HodgkinHuxley", "SEKernel"): {
         "sigma_f": 4.57346376e02,
         "l": 5.33533781e-02,
     },
@@ -142,7 +142,7 @@ _fitzhugh_nagumo_clean = {
         "l": 3.667510267272261,
     },
     # OPTIMIZED on no-noise. LL=-135.48
-    ("FitzhughNagumo", "MySEKernel"): {
+    ("FitzhughNagumo", "SEKernel"): {
         "sigma_f": 2.53347,
         "l": 1.14897
     },
@@ -172,7 +172,7 @@ _hodgkin_huxley_clean = {
         "l": 0.2495895442270998,
     },
     # OPTIMIZED on no-noise. LL=-8547
-    ("HodgkinHuxley", "MySEKernel"): {
+    ("HodgkinHuxley", "SEKernel"): {
         "sigma_f": 4.97343652e02,
         "l": 4.31450040e-03,
     },
@@ -199,7 +199,7 @@ _hodgkin_huxley_clean = {
 
 _hindmarsh_rose_fast_clean = {
     # OPTIMIZED on no noise. LL = -114
-    ("HRFast", "MySEKernel"): {
+    ("HRFast", "SEKernel"): {
         "sigma_f": 1.9841870275260058,
         "l": 0.0938153427971645,
     },
