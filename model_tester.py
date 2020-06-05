@@ -6,7 +6,6 @@ import numpy as np
 import numpy.random
 import scipy.optimize
 import scipy.io
-import sklearn.svm
 import os.path
 import warnings
 
