@@ -25,7 +25,7 @@ GPR_SCHEMES = [
     "rbf",
     "neural",
     "FKL",
-    "MySEKernel",
+    "SEKernel",
     "ModuloKernel",
     "PeriodicKernel",
     "Matern32",
