@@ -81,11 +81,12 @@ _hindmarsh_rose_fast_noisy = {
 
 
 _hodgkin_huxley_noisy = {
-    # Attempted optimization with sigma_n = 2 Params stopped changing.
-    # As optimized as it seems to go. LL=-3879
+    # Attempted optimization with sigma_n = 2. Bad LL, but params
+    # stopped changing. Possibly near a saddle point? LL=-6170
+    # (noise-free -175,468,920)
     ("HodgkinHuxley", "SEKernel"): {
-        "sigma_f": 4.40116788e2,
-        "l": 1.79824976e-2,
+        "sigma_f": 4.57346376e02,
+        "l": 5.33533781e-02,
     },
     # sigma_n = 2
     ("HodgkinHuxley", "Matern32"): {
@@ -169,8 +170,8 @@ _hodgkin_huxley_clean = {
     },
     # OPTIMIZED on no-noise. LL=-8547
     ("HodgkinHuxley", "SEKernel"): {
-        "sigma_f": 4.05939621e2,
-        "l": 1.81488593e-3,
+        "sigma_f": 4.97343652e02,
+        "l": 4.31450040e-03,
     },
     # OPTIMIZED on no-noise. LL=-9952
     ("HodgkinHuxley", "ModuloKernel"): {
