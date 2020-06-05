@@ -321,7 +321,6 @@ def main():
     fig, ax = plt.subplots()
     # Generate and plot noise-free data, if working with noised simulations
     if args.noise != 0 and args.data in dg.DATASETS.keys() and args.model is not None:
-        args.validate = False
         clean_ts, clean_ys, _, _, _ = get_data(args, noise=0, to_validate=False)
         ax.plot(clean_ts, clean_ys, "k--", label="Noise-free signal", alpha=0.5)
     # Plot (possibly noised) simulation
