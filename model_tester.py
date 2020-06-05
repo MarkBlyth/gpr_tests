@@ -12,7 +12,6 @@ import warnings
 import datagenerator as dg
 import hyperpars as hp
 import spectralrunner as fkl
-import nssmrunner as nssm
 import BarsNWrapper.wrapper as wrapper
 
 import SingleCellCBC.gpr.gpr as mygpr
@@ -20,10 +19,6 @@ import SingleCellCBC.gpr.kernels as mykernels
 
 
 GPR_SCHEMES = [
-    "gsm",
-    "sm",
-    "rbf",
-    "neural",
     "FKL",
     "SEKernel",
     "ModuloKernel",
@@ -296,17 +291,13 @@ def main():
         model = fkl.run(ts, ys, ts_test, ys_test, n_iters=args.niters)
         gpr_ys = model(gpr_ts)
 
-    elif args.model in ["gsm", "sm", "rbf", "neural"]:
-        model = nssm.run(ts, ys, args.model, noise=args.noise)
-        gpr_ys = model(gpr_ts)
-
     elif args.model == "BARS":
         smoothed_ts, smoothed_xs, new_ts, new_xs = wrapper.barsN(ts, ys)
         gpr_ys = smoothed_xs
         gpr_ts = smoothed_ts
 
     if ts_test is not None:
-        if args.model is "BARS":
+        if args.model == "BARS":
             raise NotImplementedError(
                 "BARS cannot be validated under its current implementation"
             )
