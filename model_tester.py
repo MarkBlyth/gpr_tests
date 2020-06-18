@@ -108,7 +108,7 @@ available to simulate are {0}""".format(
         "-T",
         "--tests",
         help="Number of latent testpoints to evaluate the GP at",
-        default=100,
+        default=400,
         type=int,
     )
     parser.add_argument(
