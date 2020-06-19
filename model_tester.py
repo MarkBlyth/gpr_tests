@@ -149,6 +149,12 @@ available to simulate are {0}""".format(
     parser.add_argument(
         "--var", "-V", help="Plot variance bands, where available", action="store_true",
     )
+    parser.add_argument(
+        "--tmin", help="Lower-bound time to plot experimental data from", type=float, default=None
+    )
+    parser.add_argument(
+        "--tmax", help="Upper-bound time to plot experimental data to", type=float, default=None
+    )
     return parser.parse_args()
 
 
@@ -245,6 +251,12 @@ def get_data(args, noise, to_validate):
             "Noise level sigma_n is not a trainable parameter in this script. Appropriate values must be estimated when working with real data."
         )
         ts, ys = np.load(args.data)
+        if args.tmin is None:
+            args.tmin = np.min(ts)
+        if args.tmax is None:
+            args.tmax = np.max(ts)
+        ys = ys[np.logical_and(ts>=args.tmin, ts<=args.tmax)]
+        ts = ts[np.logical_and(ts>=args.tmin, ts<=args.tmax)]
     else:
         # Generate some neuron training data
         ts, ys = dg.simple_data_generator(
