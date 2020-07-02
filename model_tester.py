@@ -307,15 +307,10 @@ def main():
         gpr_ys = model(gpr_ts)
 
     elif args.model == "BARS":
-        smoothed_ts, smoothed_xs, new_ts, new_xs = wrapper.barsN(ts, ys)
-        gpr_ys = smoothed_xs
-        gpr_ts = smoothed_ts
+        model = wrapper.barsN(ts, ys, burnin=5000, prior_param=(0, 80), iknots=80)
+        gpr_ys = model(gpr_ts)
 
     if ts_test is not None:
-        if args.model == "BARS":
-            raise NotImplementedError(
-                "BARS cannot be validated under its current implementation"
-            )
         gpr_test_ys = model(ts_test)
         MSPE = np.mean((gpr_test_ys - ys_test) ** 2)
         rMSPE = np.mean(((gpr_test_ys - ys_test) / ys_test) ** 2)
