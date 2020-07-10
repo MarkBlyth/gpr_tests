@@ -1,17 +1,17 @@
 
 # Table of Contents
 
-1.  [Summary](#org9624eba)
-2.  [Compiling free-knot splines](#org1429fc4)
-3.  [Models](#orgf37a555)
-4.  [Data](#org5d291ac)
-5.  [Hyperparameters](#org106c099)
-6.  [Dependencies](#org2d9b7fd)
-7.  [Examples](#org682bd31)
-8.  [References](#orgaf24328)
+1.  [Summary](#orgf479852)
+2.  [Compiling free-knot splines](#orgf840b78)
+3.  [Models](#orgbe9aa9f)
+4.  [Data](#orge3accea)
+5.  [Hyperparameters](#org84276a1)
+6.  [Dependencies](#org06c00af)
+7.  [Examples](#org9c1e99d)
+8.  [References](#orgec141fe)
 
 
-<a id="org9624eba"></a>
+<a id="orgf479852"></a>
 
 # Summary
 
@@ -66,7 +66,7 @@ These codes are designed for testing out a range of non-parametric regression me
 The data and model flags are the most interesting, see below.
 
 
-<a id="org1429fc4"></a>
+<a id="orgf840b78"></a>
 
 # Compiling free-knot splines
 
@@ -78,7 +78,7 @@ code will run fine without this having been built, so this step is
 only necessary if you want to test BARS.
 
 
-<a id="orgf37a555"></a>
+<a id="orgbe9aa9f"></a>
 
 # Models
 
@@ -120,21 +120,7 @@ The following regression models are implemented:
 <tr>
 <td class="org-left">GP: Modulo-based psuedokernel</td>
 <td class="org-left">ModuloKernel</td>
-<td class="org-left">I made this</td>
-</tr>
-
-
-<tr>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">method up, not</td>
-</tr>
-
-
-<tr>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">recommended</td>
+<td class="org-left">I made this method up, not recommended</td>
 </tr>
 
 
@@ -180,7 +166,7 @@ To choose a method, put its name after the model flag, eg.
     ./model_tester.py -d [DATA] -m BARS
 
 
-<a id="org5d291ac"></a>
+<a id="orge3accea"></a>
 
 # Data
 
@@ -231,7 +217,7 @@ Datafiles should be a saved np array, where the first row is sample times, and t
     ./model_tester.py -d experimental_data.np
 
 
-<a id="org106c099"></a>
+<a id="org84276a1"></a>
 
 # Hyperparameters
 
@@ -244,7 +230,7 @@ To select the hyperparameters, use the hypers flag.
     ./model_tester.py [...] --hypers CleanFitted
 
 
-<a id="org2d9b7fd"></a>
+<a id="org06c00af"></a>
 
 # Dependencies
 
@@ -443,7 +429,7 @@ Full package list: (note some of these may be redundant now!)
 </table>
 
 
-<a id="org682bd31"></a>
+<a id="org9c1e99d"></a>
 
 # Examples
 
@@ -464,7 +450,7 @@ Improve the simulation accuracy, thus increasing the number of datapoints
     ./model_tester.py -d HRFast -m Matern32 -v -r 1e-9
 
 
-<a id="orgaf24328"></a>
+<a id="orgec141fe"></a>
 
 # References
 
