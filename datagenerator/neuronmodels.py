@@ -119,6 +119,25 @@ def hindmarsh_rose_fast(x, a=1, b=3, c=1, d=5, z=0, I=2):
     return hindmarsh_rose(new_x, a, b, c, d, I=I)[:-1]
 
 
+def van_der_Pol(x, epsilon=10):
+    """
+    Defines the RHS of the van der Pol model
+        x: ndarray
+            np array of the system state, of form [u,v]
+
+        **kwargs:
+            Optional parameters. The parameters that can be modified,
+            and their default values, are as follows:
+                epsilon : 10; dimensionless parameter
+
+    Returns the derivatives [u_dot, v_dot, w_dot]
+    """
+    u, v = x
+    u_dot = v
+    v_dot = epsilon * (1 - u**2) * v - u
+    return np.array([u_dot, v_dot])
+
+
 def simple_data_generator(model, n_t_evals=400, observation_noise=0, transients=0, **kwargs):
     """Model runner for simulating neurons. Default parameter values
     are used, unless set in **kwargs. Example initial conditions and
@@ -170,11 +189,13 @@ def simple_data_generator(model, n_t_evals=400, observation_noise=0, transients=
         hodgkin_huxley: np.array([-70, 0, 0, 1]),
         hindmarsh_rose: np.array([0, -8, 2]),
         hindmarsh_rose_fast: np.array([0, 0]),
+        van_der_Pol: np.array([1, -1]),
     }
     t_spans = {
         hindmarsh_rose_fast: np.array([-transients, 20]),
         hindmarsh_rose: np.array([-transients, 1000]),
         fitzhugh_nagumo: np.array([-transients, 150]),
+        van_der_Pol: np.array([-transients, 60]),
     }
     tspan = t_spans[model] if model in t_spans else np.array(
         [-transients, 50])
@@ -204,4 +225,5 @@ DATASETS = {
     "FitzhughNagumo": fitzhugh_nagumo,
     "HindmarshRose": hindmarsh_rose,
     "HRFast": hindmarsh_rose_fast,
+    "vdP": van_der_Pol,
 }
