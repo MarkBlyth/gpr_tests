@@ -119,7 +119,7 @@ def hindmarsh_rose_fast(x, a=1, b=3, c=1, d=5, z=0, I=2):
     return hindmarsh_rose(new_x, a, b, c, d, I=I)[:-1]
 
 
-def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
+def simple_data_generator(model, n_t_evals=400, observation_noise=0, transients=0, **kwargs):
     """Model runner for simulating neurons. Default parameter values
     are used, unless set in **kwargs. Example initial conditions and
     integration bounds are used, unless set in **kwargs.
@@ -127,6 +127,11 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
         model : function
             The defining RHS function for the neuron model of
             interest.
+
+        n_t_evals : int > 0
+            Model is evaluated at a set of timepoints t_eval. This
+            parameter specifies how many timepoints there should be in
+            t_eval.
 
         observation_noise : float>0
             Variance of a normally distributed random variable, added
@@ -173,6 +178,7 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
     }
     tspan = t_spans[model] if model in t_spans else np.array(
         [-transients, 50])
+    t_eval = np.linspace(0, tspan[1], n_t_evals)
     if model not in y0s:
         raise ValueError(
             "{0} is not a supported model type. Must be one of {1}".format(
@@ -181,7 +187,7 @@ def simple_data_generator(model, observation_noise=0, transients=0, **kwargs):
         )
     # Set up the default integration time and initial conditions,
     # allowing for kwargs to override these
-    solver_args = {**{"t_span": tspan, "y0": y0s[model]}, **solver_kwargs}
+    solver_args = {**{"t_span": tspan, "y0": y0s[model], "t_eval": t_eval}, **solver_kwargs}
 
     # Set up and solve!
     def model_func(t, x): return model(x, **model_kwargs)
