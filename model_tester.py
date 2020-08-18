@@ -286,7 +286,7 @@ def get_data(args, noise, to_validate, n_t_evals):
     ts_test, ys_test = None, None
     if to_validate:
         indices = np.arange(len(ys))
-        test_indices = np.mod(indices, 3) == 0
+        test_indices = np.mod(indices, 4) == 0
         ts_test, ys_test = ts[test_indices], ys[test_indices]
         ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
 
