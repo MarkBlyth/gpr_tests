@@ -276,7 +276,6 @@ def get_data(args, noise, to_validate, n_t_evals):
             rtol=args.rtol,
             transients=args.transients,
         )
-        ys += np.random.normal(0, noise, ys.shape)
 
     # Downsample training data, if needed
     if args.downsample is not None:
@@ -291,6 +290,8 @@ def get_data(args, noise, to_validate, n_t_evals):
         ts_test, ys_test = ts[test_indices], ys[test_indices]
         ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
 
+    # Add noise
+    ys += np.random.normal(0, noise, ys.shape)
     # Points to evaluate a model at, for plotting
     gpr_ts = np.linspace(min(ts), max(ts), args.tests)
 
@@ -353,8 +354,8 @@ def main():
             pass
         # Plot validation points, if appropriate
         if args.validate:
-            ax.scatter(ts_test, gpr_test_ys, label="Predicted test points")
-            ax.scatter(ts_test, ys_test, c="red", marker="X", label="Actual test points")
+            ax.scatter(ts_test, gpr_test_ys, label="Model prediction at test-points")
+            ax.scatter(ts_test, ys_test, c="red", marker="X", label="Actual value at test points")
             ax.legend()
         # Plot model fit, if appropriate
         if args.model is not None:
