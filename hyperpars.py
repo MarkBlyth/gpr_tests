@@ -231,14 +231,70 @@ _hindmarsh_rose_fast_clean = {
 }
 
 
+_van_der_Pol_clean = {
+    ("vdP", "Matern32"): {
+        "sigma_f": 12.15184545,
+        "l": 1.56159305,
+    },
+    ("vdP", "PeriodicMatern32"): {
+        "sigma_f": 8.05032202,
+        "l": 0.33972242,
+        "period": 11.60929328,
+    },
+    ("vdP", "Matern52"): {
+        "sigma_f": 9.91196702,
+        "l": 0.79413803,
+    },
+    ("vdP", "PeriodicKernel"): {
+        "sigma_f": 2.27827158,
+        "l": 4.24383689e-3,
+        "period": 11.6088209,
+    },
+    ("vdP", "SEKernel"): {
+        "sigma_f": 4.12496143,
+        "l": 0.05754198,
+    },
+}
+
+_van_der_Pol_noisy = {
+    # Fitted with -n 0.1 noise to 400 datapoints
+    ("vdP", "Matern32"): {
+        "sigma_f": 7.4761254308,
+        "l": 1.6259200203,
+    },
+    ("vdP", "PeriodicMatern32"): {
+        "sigma_f": 5.46441484,
+        "l": 0.3638423117,
+        "period": 11.612752604,
+    },
+    ("vdP", "Matern52"): {
+        "sigma_f": 6.7116531848995,
+        "l": 1.08825875977,
+    },
+    ("vdP", "PeriodicKernel"): {
+        "sigma_f": 4.171205693,
+        "l": 0.03171166145,
+        "period": 11.61007266497,
+    },
+    ("vdP", "SEKernel"): {
+        "sigma_f": 5.64847509,
+        "l": 0.4063241,
+    },
+}
+
+
+
+
 CLEAN_FITTED_HYPERPARS = {
     **_hodgkin_huxley_clean,
     **_fitzhugh_nagumo_clean,
     **_hindmarsh_rose_fast_clean,
+    **_van_der_Pol_clean,
 }
 
 NOISE_FITTED_HYPERPARS = {
     **_hodgkin_huxley_noisy,
     **_fitzhugh_nagumo_noisy,
     **_hindmarsh_rose_fast_noisy,
+    **_van_der_Pol_noisy,
 }
