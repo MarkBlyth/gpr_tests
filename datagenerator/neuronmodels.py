@@ -119,7 +119,7 @@ def hindmarsh_rose_fast(x, a=1, b=3, c=1, d=5, z=0, I=2):
     return hindmarsh_rose(new_x, a, b, c, d, I=I)[:-1]
 
 
-def van_der_Pol(x, epsilon=10):
+def van_der_Pol(x, epsilon=5):
     """
     Defines the RHS of the van der Pol model
         x: ndarray
