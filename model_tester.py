@@ -288,13 +288,14 @@ def get_data(args, noise, to_validate, n_t_evals):
         indices = np.arange(len(ys))
         test_indices = np.mod(indices, 4) == 0
         ts_test, ys_test = ts[test_indices], ys[test_indices]
+        # 1:-1 ensures test points are within the training data range
+        ts_test, ys_test = ts_test[1:-1], ys_test[1:-1]
         ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
 
     # Add noise
     ys += np.random.normal(0, noise, ys.shape)
     # Points to evaluate a model at, for plotting
     gpr_ts = np.linspace(min(ts), max(ts), args.tests)
-
     return ts, ys, ts_test, ys_test, gpr_ts
 
 
