@@ -21,7 +21,6 @@ import SingleCellCBC.gpr.kernels as mykernels
 GPR_SCHEMES = [
     "FKL",
     "SEKernel",
-    "ModuloKernel",
     "PeriodicKernel",
     "Matern32",
     "PeriodicMatern32",
