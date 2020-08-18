@@ -112,6 +112,13 @@ available to simulate are {0}""".format(
         type=int,
     )
     parser.add_argument(
+        "-e",
+        "--eval",
+        help="Number of points to evaluate the model at",
+        default=400,
+        type=int,
+    )
+    parser.add_argument(
         "--niters",
         "-i",
         help="Number of training iterations for functional kernel learning",
@@ -243,7 +250,7 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
     return model
 
 
-def get_data(args, noise, to_validate):
+def get_data(args, noise, to_validate, n_t_evals):
     if args.data not in dg.DATASETS.keys():
         # Using a datafile instead of a model
         if not os.path.isfile(args.data):
@@ -264,6 +271,7 @@ def get_data(args, noise, to_validate):
         # Generate some neuron training data
         ts, ys = dg.simple_data_generator(
             dg.DATASETS[args.data],
+            n_t_evals,
             atol=args.atol,
             rtol=args.rtol,
             transients=args.transients,
@@ -283,7 +291,7 @@ def get_data(args, noise, to_validate):
         ts_test, ys_test = ts[test_indices], ys[test_indices]
         ts, ys = ts[np.logical_not(test_indices)], ys[np.logical_not(test_indices)]
 
-    # Points to evaluate a model at
+    # Points to evaluate a model at, for plotting
     gpr_ts = np.linspace(min(ts), max(ts), args.tests)
 
     return ts, ys, ts_test, ys_test, gpr_ts
@@ -292,7 +300,7 @@ def get_data(args, noise, to_validate):
 def main():
     args = parse_args()
     hyperpars = get_hypers(args)
-    ts, ys, ts_test, ys_test, gpr_ts = get_data(args, args.noise, args.validate)
+    ts, ys, ts_test, ys_test, gpr_ts = get_data(args, args.noise, args.validate, args.eval)
     print("Working with {0} datapoints".format(len(ts)))
 
     # If we want one of the my-code GPRs...
@@ -323,7 +331,7 @@ def main():
         fig, ax = plt.subplots()
         # Generate and plot noise-free data, if working with noised simulations
         if args.noise != 0 and args.data in dg.DATASETS.keys() and args.model is not None:
-            clean_ts, clean_ys, _, _, _ = get_data(args, noise=0, to_validate=False)
+            clean_ts, clean_ys, _, _, _ = get_data(args, noise=0, to_validate=False, n_t_evals=args.eval)
             ax.plot(clean_ts, clean_ys, "k--", label="Noise-free signal", alpha=0.5)
         # Plot (possibly noised) simulation
         ax.plot(ts, ys, label="Model simulation")
