@@ -13,6 +13,7 @@ import datagenerator as dg
 import hyperpars as hp
 import spectralrunner as fkl
 import BarsNWrapper.wrapper as wrapper
+import fourier
 
 import SingleCellCBC.gpr.gpr as mygpr
 import SingleCellCBC.gpr.kernels as mykernels
@@ -26,6 +27,7 @@ GPR_SCHEMES = [
     "PeriodicMatern32",
     "Matern52",
     "BARS",
+    "fourier",
     None,
 ]
 
@@ -83,6 +85,13 @@ available to simulate are {0}""".format(
         action="store_true",
     )
     parser.add_argument(
+        "--fourier",
+        "-F",
+        help="Number of Fourier harmonics",
+        default=30,
+        type=int,
+    )
+    parser.add_argument(
         "--save",
         "-s",
         help="Save resulting plot with this name, instead of showing it",
@@ -106,14 +115,14 @@ available to simulate are {0}""".format(
     parser.add_argument(
         "-T",
         "--tests",
-        help="Number of latent testpoints to evaluate the GP at",
+        help="Number of points to plot the GP at",
         default=400,
         type=int,
     )
     parser.add_argument(
         "-e",
         "--eval",
-        help="Number of points to evaluate the model at",
+        help="Number of timepoints to evaluate the signal at for training and testing",
         default=400,
         type=int,
     )
@@ -134,7 +143,7 @@ available to simulate are {0}""".format(
     parser.add_argument(
         "--period",
         "-P",
-        help="Override signal period with this value, for periodic kernels",
+        help="Override or set signal period to this value, for periodic kernels and Fourier",
         type=float,
         default=None,
     )
@@ -198,7 +207,6 @@ def build_my_gpr(data_x, data_y, kernel, optimize):
     print("Using kernel {0}".format(kerneltype))
     if not optimize:
         gpr_model = mygpr.GPR(data_x, data_y, kernel)
-        print("Log likelihood = {0}".format(gpr_model.log_likelihood))
         return gpr_model
 
     kerneltype = mykernels.KERNEL_NAMES[kernel.name]
@@ -308,25 +316,36 @@ def main():
     if args.model in mykernels.KERNEL_NAMES:
         kernel = mykernels.KERNEL_NAMES[args.model](**hyperpars)
         model = build_my_gpr(ts, ys, kernel, args.optimize)
-        print("Evaluating at {0} latent points".format(len(gpr_ts)))
-        gpr_ys = model(gpr_ts)
 
     elif args.model == "FKL":
         model = fkl.run(ts, ys, ts_test, ys_test, n_iters=args.niters)
-        gpr_ys = model(gpr_ts)
 
     elif args.model == "BARS":
         model = wrapper.barsN(ts, ys, burnin=5000, prior_param=(0, 80), iknots=80)
-        gpr_ys = model(gpr_ts)
+
+    elif args.model == "fourier":
+        if args.period is None:
+            raise ValueError("Period must be passed as a commandline argument")
+        period = fourier.optimize_period_guess(ts, ys, args.fourier, args.period)
+        a0, ai, bi = fourier.fit_fourier_series(ts, ys, args.fourier, period)
+        model = fourier.fourier_undiscretise(a0, ai, bi, period)
 
     if ts_test is not None:
+        # Validation step
+        print("Running test evaluations")
         gpr_test_ys = model(ts_test)
         MSPE = np.mean((gpr_test_ys - ys_test) ** 2)
         rMSPE = np.mean(((gpr_test_ys - ys_test) / ys_test) ** 2)
+        full_ts = np.sort(np.hstack((ts, ts_test)))
+        curvature_ys = model(full_ts)
+        curvatures = (curvature_ys[2:] - 2*curvature_ys[1:-1] + curvature_ys[:-2])**2
         print("MSPE: {0}, on {1} datapoints".format(MSPE, len(gpr_test_ys)))
         print("rMSPE: {0}, on {1} datapoints".format(rMSPE, len(gpr_test_ys)))
+        print("Median curvature: {0} on {1} datapoints".format(np.median(curvatures), len(curvature_ys)))
 
     if not args.noplot:
+        print("Evaluating at {0} latent points".format(len(gpr_ts)))
+        gpr_ys = model(gpr_ts)
         print("Generating plot")
         # Plot results
         fig, ax = plt.subplots()
