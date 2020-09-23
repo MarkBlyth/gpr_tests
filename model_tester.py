@@ -7,6 +7,7 @@ import numpy.random
 import scipy.optimize
 import scipy.io
 import os.path
+import copy
 import warnings
 
 import datagenerator as dg
@@ -160,6 +161,9 @@ available to simulate are {0}""".format(
         help="Override l with this value",
         type=float,
         default=None,
+    )
+    parser.add_argument(
+        "--hist", "-H", help="Plot curvatures histogram", action="store_true",
     )
     parser.add_argument(
         "--var", "-V", help="Plot variance bands, where available", action="store_true",
@@ -336,12 +340,21 @@ def main():
         gpr_test_ys = model(ts_test)
         MSPE = np.mean((gpr_test_ys - ys_test) ** 2)
         rMSPE = np.mean(((gpr_test_ys - ys_test) / ys_test) ** 2)
-        full_ts = np.sort(np.hstack((ts, ts_test)))
-        curvature_ys = model(full_ts)
+        NSPE = np.mean((gpr_test_ys - ys_test) ** 2) / np.var(ys_test)
+        ordered_indices = np.argsort(np.hstack((ts, ts_test)))
+        curvature_ys = np.hstack((model(ts), gpr_test_ys))[ordered_indices]
         curvatures = (curvature_ys[2:] - 2*curvature_ys[1:-1] + curvature_ys[:-2])**2
         print("MSPE: {0}, on {1} datapoints".format(MSPE, len(gpr_test_ys)))
         print("rMSPE: {0}, on {1} datapoints".format(rMSPE, len(gpr_test_ys)))
+        print("NSPE: {0}".format(NSPE))
         print("Median curvature: {0} on {1} datapoints".format(np.median(curvatures), len(curvature_ys)))
+        if args.hist:
+            fig, ax = plt.subplots()
+            hist, bins = np.histogram(curvatures, len(curvatures)//20)
+            logbins = np.logspace(np.log10(bins[0]), np.log10(bins[-1]), len(bins))
+            ax.hist(curvatures, bins=logbins)
+            ax.set_xscale("log")
+            plt.show()
 
     if not args.noplot:
         print("Evaluating at {0} latent points".format(len(gpr_ts)))
@@ -352,6 +365,8 @@ def main():
         # Generate and plot noise-free data, if working with noised simulations
         if args.noise != 0 and args.data in dg.DATASETS.keys() and args.model is not None:
             clean_ts, clean_ys, _, _, _ = get_data(args, noise=0, to_validate=False, n_t_evals=args.eval)
+            SNR = np.mean(clean_ys**2) / (args.noise**2)
+            print("SNR: ", SNR, " or ", 10*np.log10(SNR), "dB")
             ax.plot(clean_ts, clean_ys, "k--", label="Noise-free signal", alpha=0.5)
         # Plot (possibly noised) simulation
         ax.plot(ts, ys, label="Model simulation")
